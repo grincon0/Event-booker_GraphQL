@@ -4,10 +4,13 @@ const bodyParser = require('body-parser');
 //will take incoming requests and funnel them to the right resolvers
 const graphqlHttp = require('express-graphql');
 //get method to create shcema for models and mutations
-const { buildSchema } = require('graphql')
+const { buildSchema } = require('graphql');
+const mongoose = require('mongoose');
+const mongo = require('mongodb').MongoClient;
 const app = express();
 
-const events = [];
+const Event = require('./models/event');
+
 app.use(bodyParser.json());
 
 app.use('/graphql', graphqlHttp({
@@ -18,7 +21,7 @@ app.use('/graphql', graphqlHttp({
         type Event {
             _id: ID!
             title: String!
-            description: String!
+            description: String! 
             price: Float!
             date: String!
         }
@@ -44,25 +47,50 @@ app.use('/graphql', graphqlHttp({
     //bundle of all resolvers
     rootValue: {
         events: () => {
-            return events
+            Event.find().then( events => {
+                return events.map( event => {
+                    return {...events._doc}
+                })
+            }).catch( err => {
+                throw err;
+            });
         },
-        createEvent: (args) => {
-            const event = {
+        createEvent: (args) => {  
+          /*   const event = {
                 _id: Math.random().toString(),
                 title: args.eventInput.title,
                 description: args.eventInput.description,
                 //+ CONVERT TO FLOAT
                 price: +args.eventInput.price,
                 date: args.eventInput.date
-            };
-            events.push(event);
-
-            return event;
+            }; */
+            const event = new Event({
+                title: args.eventInput.title,
+                description: args.eventInput.description,
+                //+ CONVERT TO FLOAT
+                price: +args.eventInput.price,
+                date: new Date(args.eventInput.date)
+            })
+            //hits mongoose and save entity to DB
+            //return this block ofcode so that it GraphQL will wait for it
+            return event.save().then((result)=>{
+                console.log(result)
+                //returns pure tentity object without metadata
+                return { ...result._doc};
+            }).catch(()=>{
+                console. log(err);
+            });
+            
         }
 
     },
     graphiql: true
 }))
-
-
-app.listen(3000);
+//mongodb+srv://grincon:<password>@cluster0-odqw0.mongodb.net/test?retryWrites=true&w=majority
+mongoose.connect(`mongodb+srv://${process.env.MONGO_USER}:${
+    process.env.MONGO_PASSWORD
+}@cluster0-odqw0.mongodb.net/${process.env.MONGO_DB}?retryWrites=true&w=majority`).then(()=> {
+    app.listen(3000); 
+}).catch((err)=> {
+    console.log(err)
+});
