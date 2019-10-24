@@ -18,7 +18,7 @@ module.exports = {
     bookEvent: async args => {
         const fetchedEvent = await Event.findOne({ _id: args.eventId });
         const booking = new Booking({
-            user: '5db062778b45cb30e23ce064',
+            user: '5db062778b45cb30e23ce064', 
             event: fetchedEvent
         });
 
@@ -26,7 +26,11 @@ module.exports = {
 
         return transformBooking(result);
     },
-    cancelBooking: async args => {
+    cancelBooking: async (args, req) => {
+
+        if(!req.isAuth){
+            throw new Error('Unathentication');
+        }
         try{
             const booking = await Booking.findById(args.bookingId).populate('event');
             const event = transformEvent(booking._doc.event);

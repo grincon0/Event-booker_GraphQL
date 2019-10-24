@@ -23,18 +23,20 @@ module.exports = {
         } catch (err) {
             throw err;
         }
-
-
     },
-    createEvent: async (args) => {
+    createEvent: async (args, req) => {
+
+        if(!req.isAuth){
+            throw new Error('Unauthenticated!');
+        }
         const event = new Event({
             title: args.eventInput.title,
             description: args.eventInput.description,
             //+ CONVERT TO FLOAT
             price: +args.eventInput.price,
             date: new Date(args.eventInput.date),
-            creator: '5db062778b45cb30e23ce064'
-        })
+            creator: req.userId
+        });
 
         let createdEvent;
         //hits mongoose and save entity to DB
@@ -50,8 +52,8 @@ module.exports = {
                 id: result._doc._id.toString(),
                 date: new Date(event._doc.date).toISOString(),
                 creator: user.bind(this, result._doc.creator)
-            } */
-            const creator = await User.findById('5db062778b45cb30e23ce064');
+            } */ 
+            const creator = await User.findById(req.userId);
 
             if (!creator) {
                 throw new Error("User not found");
